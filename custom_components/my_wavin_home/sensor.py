@@ -29,7 +29,8 @@ async def async_setup_entry(
     if coordinator.data:
         for room_id, room_data in coordinator.data.items():
             entities.append(HVACTemperatureSensor(coordinator, entry, room_id, room_data))
-            entities.append(HVACHumiditySensor(coordinator, entry, room_id, room_data))
+            if room_id != "outside_temperature":
+                entities.append(HVACHumiditySensor(coordinator, entry, room_id, room_data))
     
     async_add_entities(entities)
 
