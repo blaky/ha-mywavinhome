@@ -37,12 +37,11 @@ class HVACClimate(CoordinatorEntity, ClimateEntity):
     """Climate entity for a room."""
 
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
-    # Removing TARGET_TEMPERATURE feature for now since API doesn't support setting it yet
-    _attr_supported_features = 0  # Read-only for now
-    _attr_target_temperature_step = 0.5
-    _attr_min_temp = 5.0
-    _attr_max_temp = 35.0
+    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.COOL, HVACMode.OFF]
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+    _attr_target_temperature_step = 1
+    _attr_min_temp = 15
+    _attr_max_temp = 28
 
     def __init__(self, coordinator, entry, room_id, room_data):
         """Initialize the climate entity."""
@@ -63,14 +62,16 @@ class HVACClimate(CoordinatorEntity, ClimateEntity):
     def current_temperature(self) -> float | None:
         """Return the current temperature."""
         if self.coordinator.data and self.room_id in self.coordinator.data:
-            return self.coordinator.data[self.room_id].get("temperature")
+            temp = self.coordinator.data[self.room_id].get("target_temperature")
+            return float(temp) if temp is not None else None
         return None
 
     @property
     def target_temperature(self) -> float | None:
         """Return the target temperature."""
         if self.coordinator.data and self.room_id in self.coordinator.data:
-            return self.coordinator.data[self.room_id].get("target_temperature")
+            temp = self.coordinator.data[self.room_id].get("target_temperature")
+            return float(temp) if temp is not None else None
         return None
 
     @property
@@ -80,8 +81,10 @@ class HVACClimate(CoordinatorEntity, ClimateEntity):
             room_data = self.coordinator.data[self.room_id]
             # For now, always return HEAT mode when temperature data is available
             # You can extend this logic based on your API's response structure
-            if room_data.get("temperature") is not None:
+            if room_data.get("is_heating_on") is True:
                 return HVACMode.HEAT
+            if room_data.get("is_cooling_on") is True:
+                return HVACMode.COOL
         return HVACMode.OFF
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -90,14 +93,7 @@ class HVACClimate(CoordinatorEntity, ClimateEntity):
         if temperature is None:
             return
 
-        # TODO: Implement API call to set target temperature
-        # This requires extending your API client with a set_target_temperature method
-        _LOGGER.warning(
-            "Setting temperature not yet implemented. "
-            "Room: %s, Target: %s°C", 
-            self.room_id, 
-            temperature
-        )
+        await self.coordinator.api_client.set_room_target_temperature(self.room_id, temperature)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Set new target hvac mode."""

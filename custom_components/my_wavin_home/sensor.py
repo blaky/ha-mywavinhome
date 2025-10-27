@@ -1,6 +1,7 @@
 """Sensor platform for HVAC System."""
 import logging
 
+from custom_components.my_wavin_home.climate import HVACClimate
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
